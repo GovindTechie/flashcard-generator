@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flashcard Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .card { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .question { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Flashcard Generator</h1>
+    <form method="POST">
+        <textarea name="input_text" rows="6" cols="80" placeholder="Paste your text here..."></textarea><br><br>
+        <button type="submit">Generate Flashcards</button>
+    </form>
+    
+    {% if flashcards %}
+        <h2>Generated Flashcards:</h2>
+        {% for card in flashcards %}
+            <div class="card">
+                <div class="question">{{ card.question }}</div>
+                <ul>
+                    {% for option in card.options %}
+                        <li>{{ option }}</li>
+                    {% endfor %}
+                </ul>
+                <div><strong>Answer:</strong> {{ card.answer }}</div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</body>
+</html>
