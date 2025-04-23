@@ -24,7 +24,7 @@ A simple and interactive Flashcard-based Multiple Choice Question (MCQ) web app 
 
 1. **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/flashcard-mcq-app.git
+    git clone https://github.com/GovindTechie/flashcard-generator.git
     cd flashcard-mcq-app
     ```
 
