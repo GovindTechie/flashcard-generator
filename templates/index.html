@@ -1,33 +1,210 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Flashcard Generator</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .card { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 8px; }
-        .question { font-weight: bold; }
-    </style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Flashcard Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ==== GLOBAL RESET & NO SCROLL ==== */
+    * { box-sizing: border-box; }
+    html, body {
+      margin:0; padding:0; height:100%; overflow:hidden;
+      font-family:'Roboto',sans-serif; font-size:14px; color:#333;
+      background:linear-gradient(135deg,#f4f7f9,#e5e9f0);
+    }
+    body {
+      border:8px solid;
+      border-image:linear-gradient(135deg,#43cea2,#185a9d)1;
+      display:flex; flex-direction:column;
+    }
+    header, footer {
+      flex:none; text-align:center; background:#fff; padding:8px;
+    }
+    header .team { font-size:0.9em; font-style:italic; color:#555; margin-bottom:4px; }
+    header h1 { margin:0; font-size:1.8em; }
+    footer { font-size:0.85em; color:#666; }
+
+    /* ==== SPLIT LAYOUT ==== */
+    .container { flex:1; display:flex; overflow:hidden; }
+    .input-pane,
+    .flashcard-pane { flex:1; padding:8px; overflow:hidden; }
+    .input-pane { border-right:2px solid #ddd; }
+
+    /* ==== INPUT PANE ==== */
+    form { margin-bottom:6px; }
+    textarea {
+      width:100%; height:150px;       /* reduced from 30vh */
+      resize:none; padding:8px;
+      font-size:0.8em;
+      border:1px solid #ccc; border-radius:4px;
+    }
+    .form-controls {
+      margin-top:6px; display:flex; gap:6px; align-items:center;
+    }
+    select, button {
+      padding:6px 10px; font-size:0.8em; border:1px solid #ccc; border-radius:4px;
+    }
+    button {
+      background:#007BFF; color:#fff; cursor:pointer; transition:background .3s;
+    }
+    button:hover { background:#0056b3; }
+
+    .original-text {
+      height:calc(70vh - 8px); padding:8px;
+      font-size:1.2em; /* increased font size */
+      line-height:1.4;
+      border:1px solid #ddd; border-radius:4px;
+      background:#fafafa; overflow:auto;
+    }
+
+    /* ==== FLASHCARD PANE ==== */
+    .flashcard-content {
+      height:calc(100% - 100px); overflow:auto; padding:8px;
+    }
+    .card {
+      display:none;
+      background:#fff;
+      border:2px solid;
+      border-image:linear-gradient(45deg,#6a11cb,#2575fc)1;
+      border-radius:8px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.1);
+      padding:16px; margin-bottom:16px;
+      /* hover disabled */
+    }
+    .card:hover {
+      /* no transform */
+    }
+    .question {
+      font-size:1.3em; font-weight:600; margin-bottom:12px; color:#222;
+    }
+    ul.options {
+      list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;
+    }
+    ul.options li {
+      padding:8px 12px; font-size:1.1em; background:#e9ecef; border-radius:4px;
+      cursor:pointer; position:relative; transition:background .3s;
+    }
+    ul.options li:hover { background:#dfe4ea; }
+    .correct { background:#d4edda; border:1px solid #28a745; }
+    .correct::after {
+      content:'✓'; position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      color:#28a745; font-weight:bold;
+    }
+    .incorrect { background:#f8d7da; border:1px solid #dc3545; }
+    .incorrect::after {
+      content:'✗'; position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      color:#dc3545; font-weight:bold;
+    }
+    .disabled { pointer-events:none; opacity:.8; }
+
+    #progress {
+      margin:8px 0; text-align:center; font-size:0.9em; color:#555;
+    }
+    .navigation, .download-form {
+      text-align:center; margin-bottom:6px;
+    }
+    .navigation button, .download-form button {
+      padding:6px 12px; font-size:0.9em;
+    }
+    .download-form button {
+      background:#28a745; border:1px solid #28a745; color:#fff; cursor:pointer;
+      transition:background .3s; border-radius:4px;
+    }
+    .download-form button:hover { background:#218838; }
+  </style>
 </head>
 <body>
+  <header>
+    <div class="team">
+      Team Members: Govind Khedkar (Project Implementer), Atul Deshpande (Idea Contributor), Ritesh Maharnavar, Rajvardhan Zade
+    </div>
     <h1>Flashcard Generator</h1>
-    <form method="POST">
-        <textarea name="input_text" rows="6" cols="80" placeholder="Paste your text here..."></textarea><br><br>
-        <button type="submit">Generate Flashcards</button>
-    </form>
-    
-    {% if flashcards %}
-        <h2>Generated Flashcards:</h2>
-        {% for card in flashcards %}
-            <div class="card">
-                <div class="question">{{ card.question }}</div>
-                <ul>
-                    {% for option in card.options %}
-                        <li>{{ option }}</li>
-                    {% endfor %}
-                </ul>
-                <div><strong>Answer:</strong> {{ card.answer }}</div>
+  </header>
+
+  <div class="container">
+    <div class="input-pane">
+      <form method="POST">
+        <textarea id="inputText" name="input_text" placeholder="Paste your text…"></textarea>
+        <div class="form-controls">
+          <label for="difficulty"><b>Select Difficulty:</b></label>
+          <select name="difficulty" id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <button type="submit">Generate</button>
+        </div>
+      </form>
+      {% if flashcards %}
+        <div class="original-text">{{ request.form.input_text }}</div>
+      {% endif %}
+    </div>
+
+    <div class="flashcard-pane">
+      {% if flashcards %}
+        <div class="flashcard-content">
+          {% for card in flashcards %}
+            <div class="card" data-answer="{{ card.answer }}">
+              <div class="question">{{ card.question }}</div>
+              <ul class="options">
+                {% for opt in card.options %}
+                  <li onclick="selectOption(this)">{{ opt }}</li>
+                {% endfor %}
+              </ul>
             </div>
-        {% endfor %}
-    {% endif %}
+          {% endfor %}
+        </div>
+
+        <div id="progress"></div>
+        <div class="navigation">
+          <button id="prevBtn">← Prev</button>
+          <button id="nextBtn">Next →</button>
+        </div>
+        <form action="/download" method="GET" class="download-form">
+          <button type="submit">Download PDF</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <footer>
+    Made with ❤️ by Govind Khedkar & Team | Flashcard Generator © 2025
+  </footer>
+
+  <script>
+    function selectOption(li) {
+      const card = li.closest('.card'), ans = card.dataset.answer;
+      if (li.textContent===ans) li.classList.add('correct');
+      else {
+        li.classList.add('incorrect');
+        card.querySelectorAll('li').forEach(x=> {
+          if (x.textContent===ans) x.classList.add('correct');
+        });
+      }
+      card.classList.add('disabled');
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const cards = Array.from(document.querySelectorAll('.card'));
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const prog = document.getElementById('progress');
+      let idx=0;
+      function show(i) {
+        cards.forEach((c,j)=>c.style.display=j===i?'block':'none');
+        prog.textContent=`Card ${i+1} of ${cards.length}`;
+        prevBtn.disabled = i===0;
+        nextBtn.disabled = i===cards.length-1;
+      }
+      prevBtn.onclick = ()=>show(Math.max(0,--idx));
+      nextBtn.onclick = ()=>show(Math.min(cards.length-1,++idx));
+      if(cards.length) show(0);
+    });
+
+    document.querySelector('form').addEventListener('submit', function(){
+      setTimeout(()=> document.getElementById('inputText').value = '', 50);
+    });
+  </script>
 </body>
 </html>
